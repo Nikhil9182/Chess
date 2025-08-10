@@ -7,7 +7,6 @@ public class BoardManager : MonoBehaviour
     public static BoardManager Instance;
 
     public GraphicalBoard Graphic;
-    public Transform BTransform;
 
     public BoardPositionInFen CustomPosition;
 
@@ -31,11 +30,11 @@ public class BoardManager : MonoBehaviour
     private void Start()
     {
         //Graphical Setup
-        Graphic.CreateGraphicalBoard(BTransform.transform.GetChild(0), SquarePrefab);
+        Graphic.CreateGraphicalBoard(transform.GetChild(0), SquarePrefab);
 
         //Load Position
         var notation = (CustomPosition == null || CustomPosition.fenNotation.Length == 0 || LoadDefaultPosition) ? DefaultPosition : CustomPosition.fenNotation;
-        Board.LoadBoardPosition(notation, PiecePrefab, BTransform.GetChild(1));
+        Board.LoadBoardPosition(notation, PiecePrefab, transform.GetChild(1));
     }
 
     public void ResetSquares(bool resetColors, bool resetHighlights)
