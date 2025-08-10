@@ -27,7 +27,8 @@ public enum MoveType
 
 public class Moves
 {
-    List<Move> moves = new List<Move>();
+    public static List<Move> PossibleMoves = new List<Move>();
+    public static List<int> AttackSquares = new List<int>();
 
     public static readonly int[] KnightDirectionOffsets = { 15, 17, 10, 6, -15, -17, -10, -6 };
     public static readonly int[] SlidingDirectionOffsets = { 8, -8, -1, 1, 7, -7, 9, -9 };
@@ -68,37 +69,50 @@ public class Moves
         return numSquaresToEdge; // Return the initialized array
     }
 
-    public List<Move> GenerateMoves()
+    public static List<Move> GetMoves(int color)
     {
-        moves = new List<Move>();
+        var generatedMoves = new List<Move>();
 
         for (int startSquare = 0; startSquare < 64; startSquare++)
         {
             int piece = Board.Square[startSquare].Value;
 
-            if (Piece.IsColor(piece, Board.ColorToMove))
+            if (Piece.IsColor(piece, color))
             {
                 // Sliding Pieces (Rooks, Bishops, Queens)
                 if (Piece.IsSlidingPiece(piece))
                 {
-                    moves.AddRange(GenerateSlidingPieceMoves(piece, startSquare));
+                    generatedMoves.AddRange(GenerateSlidingPieceMoves(piece, startSquare));
                 }
-
                 // Knights
                 if (Piece.IsType(piece, Piece.Knight))
                 {
-                    moves.AddRange(GenerateKnightMoves(piece, startSquare));
+                    generatedMoves.AddRange(GenerateKnightMoves(piece, startSquare));
                 }
-
                 if (Piece.IsType(piece, Piece.Pawn))
                 {
-                    moves.AddRange(GeneratePawnMoves(piece, startSquare));
+                    generatedMoves.AddRange(GeneratePawnMoves(piece, startSquare));
+                }
+                if (Piece.IsType(piece, Piece.King))
+                {
+                    generatedMoves.AddRange(GenerateKingMoves(piece, startSquare));
                 }
             }
         }
 
-        return moves;
+        return generatedMoves;
     }
+
+    public static void GenerateMoves()
+    {
+        PossibleMoves = GetMoves(Board.ColorToMove);
+    }
+
+    public static void GenerateAttackedSquares(int color)
+    {
+        AttackSquares = GetMoves(color).ConvertAll(move => move.TargetSquare);
+    }
+
 
     public static List<Move> GenerateSlidingPieceMoves(int piece, int startSquare)
     {
@@ -253,6 +267,7 @@ public class Moves
         int opponentColor = friendlyColor == Piece.White ? Piece.Black : Piece.White;
 
         int startFile = startSquare % 8;
+        int startRank = startSquare / 8;
 
         foreach (var offset in SlidingDirectionOffsets)
         {
@@ -273,7 +288,36 @@ public class Moves
 
         if (!Piece.HasMoved(piece))
         {
+            // Kingside castling
+            int rookSquareKingside = startRank * 8 + 7;
+            int rookPieceKingside = Board.Square[rookSquareKingside].Value;
+            if (Piece.IsType(rookPieceKingside, Piece.Rook) && !Piece.HasMoved(rookPieceKingside) && Piece.IsColor(rookPieceKingside, friendlyColor))
+            {
+                if (Board.Square[startSquare + 1].Value == Piece.None &&
+                    Board.Square[startSquare + 2].Value == Piece.None &&
+                    !AttackSquares.Contains(startSquare) &&
+                    !AttackSquares.Contains(startSquare + 1) &&
+                    !AttackSquares.Contains(startSquare + 2))
+                {
+                    generatedMoves.Add(new Move(startSquare, startSquare + 2, MoveType.Castling)); // Castle kingside
+                }
+            }
 
+            // Queenside castling
+            int rookSquareQueenside = startRank * 8 + 0;
+            int rookPieceQueenside = Board.Square[rookSquareQueenside].Value;
+            if (Piece.IsType(rookPieceQueenside, Piece.Rook) && !Piece.HasMoved(rookPieceQueenside) && Piece.IsColor(rookPieceKingside, friendlyColor))
+            {
+                if (Board.Square[startSquare - 1].Value == Piece.None &&
+                    Board.Square[startSquare - 2].Value == Piece.None &&
+                    Board.Square[startSquare - 3].Value == Piece.None &&
+                    !AttackSquares.Contains(startSquare) &&
+                    !AttackSquares.Contains(startSquare - 1) &&
+                    !AttackSquares.Contains(startSquare - 2))
+                {
+                    generatedMoves.Add(new Move(startSquare, startSquare - 2, MoveType.Castling)); // Castle queenside
+                }
+            }
         }
 
         return generatedMoves;

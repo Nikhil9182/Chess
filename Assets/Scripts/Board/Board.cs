@@ -99,7 +99,36 @@ public static class Board
                 Square[lastMove.TargetSquare].Piece = null; // Remove the captured pawn
                 break;
             }
+            case MoveType.Castling:
+            {
+                // Handle castling logic
+                int targetSquareFile = move.TargetSquare % 8; // Get the file of the target square
+                int rookStartingSquare;
+                int rookTargetSquare;
+
+                if (targetSquareFile == 2) // Queen-side castling
+                {
+                    rookStartingSquare = move.TargetSquare - 2; // Rook starts two squares left of the king
+                    rookTargetSquare = move.TargetSquare + 1; // Rook starts on the right of the king
+                }
+                else // King-side castling
+                {
+                    rookStartingSquare = move.TargetSquare + 1; // Rook starts one square right of the king
+                    rookTargetSquare = move.TargetSquare - 1; // Rook starts on the left of the king
+                }
+
+                Square[rookTargetSquare].Piece = Square[rookStartingSquare].Piece; // Move the rook
+                Square[rookStartingSquare].Piece = null; // Clear the old rook position
+
+                Square[rookTargetSquare].Piece.Square = rookTargetSquare; // Update the rook's square index
+                Square[rookTargetSquare].Piece.Value |= 32; // Set the rook as moved (assuming 32 is the bit for moved)
+                Square[rookTargetSquare].Piece.transform.position = Square[rookTargetSquare].transform.position; // Update rook position visually
+                
+                break;
+            }
         }
+
+        Moves.GenerateAttackedSquares(ColorToMove); // Update attacked squares after the move
 
         // Switch color to move
         SwitchColorToMove();
