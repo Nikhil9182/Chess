@@ -3,41 +3,35 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
-public class BoardSquare : MonoBehaviour
+public class BoardSquare : MonoBehaviour, IPointerDownHandler
 {
     [SerializeField]
-    private SpriteRenderer spriteRen;
+    private Image img;
     [SerializeField]
-    private TextMeshPro RankTMP, FileTMP;
+    private Image highlightImg; // Optional highlight image for visual effects
+    [SerializeField]
+    private TextMeshProUGUI RankTMP, FileTMP;
 
     public BoardPiece Piece; // Reference to the piece on this square, if any
 
     public int Value { get { return Piece != null ? Piece.Value : 0; } } // Returns the value of the piece on this square, or 0 if no piece
 
-    Action MoveOnClicked; // Action to perform when the square is clicked
-
-    private BoxCollider2D col;
+    public Action MoveOnClicked; // Action to perform when the square is clicked
 
     private void Awake()
     {
-        if (spriteRen == null)
+        if (img == null)
         {
-            spriteRen = GetComponent<SpriteRenderer>();
+            img = GetComponent<Image>();
         }
-
-        col = GetComponent<BoxCollider2D>();
-        col.enabled = false; // Disable the collider by default
 
         SetHighlightActive(false);
 
         RankTMP.gameObject.SetActive(false);
         FileTMP.gameObject.SetActive(false);
-    }
-
-    private void OnMouseDown()
-    {
-        OnSquareSelected();
     }
 
     public void OnSquareSelected()
@@ -46,44 +40,59 @@ public class BoardSquare : MonoBehaviour
         {
             MoveOnClicked.Invoke();
         }
+
+        MoveOnClicked = null; // Reset the action after invoking it
     }
 
     public void SetSquareColor(Color mainColor)
     {
-        spriteRen.material.SetColor("_MainColor", mainColor);
+        img.color = mainColor;
     }
 
-    public void ShowRank(string rank, Color color)
+    public void ShowRank(bool enable, string rank = null, Color color = new())
     {
+        RankTMP.gameObject.SetActive(enable);
         RankTMP.text = rank;
         RankTMP.color = color;
-        RankTMP.gameObject.SetActive(true);
     }
 
-    public void ShowFile(string file, Color color)
+    public void ShowFile(bool enable, string file = null, Color color = new())
     {
+        FileTMP.gameObject.SetActive(enable);
         FileTMP.text = file;
         FileTMP.color = color;
-        FileTMP.gameObject.SetActive(true);
     }
 
     public void SetHighlightActive(bool enable)
     {
-        spriteRen.material.SetFloat("_HighlightSize", enable ? 0.3f : 0f);
-        col.enabled = enable; // Enable or disable the collider based on highlight state
-        if (enable) MoveOnClicked = null; // Reset the action when highlight is disabled
+        highlightImg.enabled = enable; // Enable or disable the highlight image
+        MoveOnClicked = null; // Reset the action when highlight is disabled
     }
 
     public void SetMoveOnClick(Move move, BoardPiece boardPiece)
     {
-        MoveOnClicked = () => 
+        Action moveAction = () =>
         {
             Board.MakeMove(move);
             BoardManager.Instance.ResetSquares(false, true);
-            BoardManager.Instance.SetColor(move.TargetSquare, BoardManager.Instance.Graphic.targetColor);
-            boardPiece.transform.position = transform.position; // Move the piece to the target square
-            boardPiece.Square = move.TargetSquare; // Update the square index in the piece
-            boardPiece.Value |= 32; // Set the piece as moved (assuming 32 is the bit for moved)
+            BoardManager.Instance.SetColor(move.TargetSquare, BoardManager.Instance.BoardVisuals.targetColor);
         };
+
+        if (move.Type == MoveType.Promotion)
+        {
+            MoveOnClicked = () =>
+            {
+                BoardManager.Instance.PromotionHandlerUI.ShowPromotionChoices(new UnityEngine.Events.UnityAction(moveAction)); // Set the promotion action
+            };
+        }
+        else
+        {
+            MoveOnClicked = moveAction; // Set the action to be performed when this square is clicked
+        }
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        OnSquareSelected();
     }
 }

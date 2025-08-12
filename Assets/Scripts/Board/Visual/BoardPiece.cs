@@ -1,26 +1,28 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
+using UnityEngine.UI;
 
-public class BoardPiece : MonoBehaviour
+public class BoardPiece : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public int Value;
     public int Square; // Square index (0-63)
 
-    public Sprite Sprite { get { return spriteRenderer.sprite; } set { spriteRenderer.sprite = value; } }
+    public Sprite Sprite { get { return image.sprite; } set { image.sprite = value; image.SetNativeSize(); } }
 
-    private SpriteRenderer spriteRenderer;
+    private Image image;
 
     private void Awake()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        image = GetComponent<Image>();
     }
 
-    private void OnMouseDown()
+    public void OnPointerDown(PointerEventData eventData)
     {
         if (!Piece.IsColor(Value, Board.ColorToMove)) return;
-
-        spriteRenderer.sortingOrder = 2;
 
         List<Move> moves = new();
 
@@ -33,58 +35,64 @@ public class BoardPiece : MonoBehaviour
         if (Piece.IsType(Value, Piece.King))
             moves = Moves.GenerateKingMoves(Value, Square);
 
+        //foreach (Move move in moves)
+        //{
+        //    Debug.Log($"Move: {move.StartingSquare} -> {move.TargetSquare}");
+        //}
+
         BoardManager.Instance.ResetSquares(true, true);
         BoardManager.Instance.SetMoves(moves, this);
-        BoardManager.Instance.SetColor(Square, BoardManager.Instance.Graphic.selectedColor);
+        BoardManager.Instance.SetColor(Square, BoardManager.Instance.BoardVisuals.selectedColor);
     }
 
-    //private void OnMouseDrag()
-    //{
-    //    if (!Piece.IsColor(Value, Board.ColorToMove)) return;
-    //    transform.position = (Vector2)Camera.main.ScreenToWorldPoint(Input.mousePosition);
-    //}
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        if (!IsDraggable()) return;
+        transform.SetAsLastSibling(); // Bring the piece to the front while dragging
+    }
 
-    //private void OnMouseUp() 
-    //{
-    //    if (!Piece.IsColor(Value, Board.ColorToMove)) return;
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (!IsDraggable()) return;
 
-    //    spriteRenderer.sortingOrder = 1;
+        Vector3 worldPos;
+        RectTransformUtility.ScreenPointToWorldPointInRectangle(
+            transform as RectTransform,
+            eventData.position,
+            eventData.pressEventCamera,
+            out worldPos
+        );
+        transform.position = worldPos;
+    }
 
-    //    Vector2 position = transform.position;
-    //    position = new Vector2(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f);
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (!IsDraggable()) return;
 
-    //    if (position.x < -3.5f || position.x > 3.5f || position.y < -3.5f || position.y > 3.5f) 
-    //    {
-    //        transform.position = initialPosition;
-    //    }
-    //    else 
-    //    {
-    //        int newfile = (int) (position.x + 3.5f);
-    //        int newrank = (int) (position.y + 3.5f);
+        // Raycast to see if dropped on a square
+        var results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventData, results);
 
-    //        transform.position = position;
+        foreach (var r in results)
+        {
+            var square = r.gameObject.GetComponent<BoardSquare>();
+            if (square != null && square.MoveOnClicked != null)
+            {
+                square.OnSquareSelected(); // Trigger the square's click action
+                return;
+            }
+        }
 
-    //        int newSquare = newrank * 8 + newfile;
+        transform.position = Board.Square[Square].transform.position; // Reset position if not dropped on a square
+    }
 
-    //        if (newSquare == Square) return;
+    private bool IsDraggable()
+    {
+        return Piece.IsColor(Value, Board.ColorToMove);
+    }
 
-    //        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, 0.4f);
-    //        if (colliders != null) 
-    //        {
-    //            foreach (Collider2D col in colliders) 
-    //            {
-    //                if (col.gameObject == gameObject) continue; // Skip the piece itself
-    //                if (col.TryGetComponent(out BoardSquare square)) 
-    //                {
-    //                    square.OnSquareSelected();
-    //                    BoardManager.Instance.ResetSquares(false, true);
-    //                    BoardManager.Instance.SetColor(Square, BoardManager.Instance.Graphic.targetColor);
-    //                    return; // Exit after handling the first valid square
-    //                }
-    //            }
-    //        }
-
-    //        transform.position = initialPosition;
-    //    }
-    //}
+    internal void OnTurnChanged()
+    {
+        image.raycastTarget = Piece.IsColor(Value, Board.ColorToMove);
+    }
 }

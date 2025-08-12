@@ -16,20 +16,22 @@ public static class Piece
     public const int White = 8;
     public const int Black = 16;
 
+    public const string folderName = "Sprites/Pieces_0/";
+
     public static Dictionary<int, Sprite> PiecesSprites = new Dictionary<int, Sprite>() 
     {
-        [King | Black] = Resources.Load<Sprite>("Sprites/Pieces/k 1"),
-        [Pawn | Black] = Resources.Load<Sprite>("Sprites/Pieces/p 1"),
-        [Knight | Black] = Resources.Load<Sprite>("Sprites/Pieces/n 1"),
-        [Bishop | Black] = Resources.Load<Sprite>("Sprites/Pieces/b 1"),
-        [Rook | Black] = Resources.Load<Sprite>("Sprites/Pieces/r 1"),
-        [Queen | Black] = Resources.Load<Sprite>("Sprites/Pieces/q 1"),
-        [King | White] = Resources.Load<Sprite>("Sprites/Pieces/K"),
-        [Pawn | White] = Resources.Load<Sprite>("Sprites/Pieces/P"),
-        [Knight | White] = Resources.Load<Sprite>("Sprites/Pieces/N"),
-        [Bishop | White] = Resources.Load<Sprite>("Sprites/Pieces/B"),
-        [Rook | White] = Resources.Load<Sprite>("Sprites/Pieces/R"),
-        [Queen | White] = Resources.Load<Sprite>("Sprites/Pieces/Q"),
+        [King | Black] = Resources.Load<Sprite>(folderName + "k 1"),
+        [Pawn | Black] = Resources.Load<Sprite>(folderName + "p 1"),
+        [Knight | Black] = Resources.Load<Sprite>(folderName + "n 1"),
+        [Bishop | Black] = Resources.Load<Sprite>(folderName + "b 1"),
+        [Rook | Black] = Resources.Load<Sprite>(folderName + "r 1"),
+        [Queen | Black] = Resources.Load<Sprite>(folderName + "q 1"),
+        [King | White] = Resources.Load<Sprite>(folderName + "K"),
+        [Pawn | White] = Resources.Load<Sprite>(folderName + "P"),
+        [Knight | White] = Resources.Load<Sprite>(folderName + "N"),
+        [Bishop | White] = Resources.Load<Sprite>(folderName + "B"),
+        [Rook | White] = Resources.Load<Sprite>(folderName + "R"),
+        [Queen | White] = Resources.Load<Sprite>(folderName + "Q"),
     };
 
     public static bool IsSlidingPiece(int pieceType)

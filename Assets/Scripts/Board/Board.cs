@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,13 +9,25 @@ public static class Board
     public static BoardSquare[] Square;
     public static List<Move> MoveList = new List<Move>();
 
+    public static Action OnTurnChanged; // Action to notify when the turn changes
+
     public static int ColorToMove;
     public static int EnPassantSquare = -1; // No en passant square by default
+    public static int PromotedPiece = Piece.None; // Default promotion piece
 
     static Board()
     {
-        ColorToMove = Piece.White;
         Square = new BoardSquare[64];
+        MoveList = new List<Move>();
+        OnTurnChanged = null;
+        ColorToMove = Piece.White;
+    }
+
+    public static void InitializeBoard(string fen, BoardSquare squarePrefab, BoardPiece piecePrefab, GraphicalBoard boardVisuals, Transform parent, bool isPlayingWhite)
+    {
+        LoadBoardSquares(parent, squarePrefab, boardVisuals);
+        LoadBoardPosition(fen, piecePrefab, parent);
+        SetSides(isPlayingWhite, boardVisuals);
     }
 
     public static void LoadBoardPosition(string fen, BoardPiece piecePrefab, Transform boardPiecesTransform) 
@@ -52,17 +65,65 @@ public static class Board
                     int pieceValue = pieceType | pieceColor;
                     int square = rank * 8 + file;
 
-                    var newPiecePos = new Vector2(-3.5f + file, -3.5f + rank);
-                    BoardPiece newPiece = Object.Instantiate(piecePrefab, newPiecePos, Quaternion.identity, boardPiecesTransform);
+                    BoardPiece newPiece = UnityEngine.Object.Instantiate(piecePrefab, boardPiecesTransform);
+
+                    Square[square].Piece = newPiece; // Assign the piece to the square
+                    OnTurnChanged += newPiece.OnTurnChanged; // Subscribe to turn change event
 
                     newPiece.Sprite = Piece.PiecesSprites[pieceValue];
                     newPiece.Value = pieceValue; //use 7 to get piece and 24 to get color
                     newPiece.Square = square; // Store the square index in the piece
 
-                    Square[square].Piece = newPiece; // Assign the piece to the square
-                    //Debug.Log("Rank : " + rank + "  File : " + file + "  Square : " + Square[rank * 8 + file]);
                     file++;
                 }
+            }
+        }
+    }
+
+    public static void LoadBoardSquares(Transform boardPlaceContainer, BoardSquare squarePrefab, GraphicalBoard graphicBoard)
+    {
+        for (int rank = 0; rank < 8; rank++)
+        {
+            for (int file = 0; file < 8; file++)
+            {
+                bool isLightSquare = (file + rank) % 2 != 0;
+                Color squareColor = (isLightSquare) ? graphicBoard.lightColor : graphicBoard.darkColor;
+                var square = DrawSquare(squareColor, boardPlaceContainer, squarePrefab);
+                Square[rank * 8 + file] = square;
+            }
+        }
+    }
+
+    public static BoardSquare DrawSquare(Color squareColor, Transform boardPlaceContainer, BoardSquare squarePrefab)
+    {
+        BoardSquare square = UnityEngine.Object.Instantiate(squarePrefab, boardPlaceContainer);
+        square.SetSquareColor(squareColor);
+        return square;
+    }
+
+    public static void SetSides(bool isPlayingWhite, GraphicalBoard boardVisuals)
+    {
+        var markers = isPlayingWhite ? 0 : 7; // Adjust markers based on the player's color
+        for (int rank = 0; rank < 8; rank++)
+        {
+            for (int file = 0; file < 8; file++)
+            {
+                int squareIndex = rank * 8 + file;
+                bool isLightSquare = (file + rank) % 2 != 0;
+
+
+                Square[squareIndex].transform.position = GetSquarePosition(rank, file, isPlayingWhite);
+
+                if (Square[squareIndex].Piece != null)
+                {
+                    Square[squareIndex].Piece.transform.position = Square[squareIndex].transform.position; // Update piece position visually
+                }
+
+                if (rank == markers) Square[squareIndex].ShowFile(true, ((char)('a' + file)).ToString(), (isLightSquare) ? boardVisuals.darkColor : boardVisuals.lightColor);
+                else Square[squareIndex].ShowFile(false);
+
+                if (file == markers) Square[squareIndex].ShowRank(true, (rank + 1).ToString(), (isLightSquare) ? boardVisuals.darkColor : boardVisuals.lightColor);
+                else Square[squareIndex].ShowRank(false);
             }
         }
     }
@@ -70,15 +131,21 @@ public static class Board
     public static void MakeMove(Move move)
     {
         // Update the board state
-
-        if (Square[move.TargetSquare].Piece != null)
+        var opponentPiece = Square[move.TargetSquare].Piece;
+        if (opponentPiece != null)
         {
             // Handle capture logic if the target square already has a piece
-            Square[move.TargetSquare].Piece.gameObject.SetActive(false); // Optionally deactivate the captured piece
+            opponentPiece.gameObject.SetActive(false); // Optionally deactivate the captured piece
         }
 
-        Square[move.TargetSquare].Piece = Square[move.StartingSquare].Piece;
+        var pieceMoved = Square[move.StartingSquare].Piece;
+
+        Square[move.TargetSquare].Piece = pieceMoved; // Move the piece to the target square
         Square[move.StartingSquare].Piece = null;
+
+        pieceMoved.transform.position = Square[move.TargetSquare].transform.position; // Move the piece to the target square
+        pieceMoved.Square = move.TargetSquare; // Update the square index in the piece
+        pieceMoved.Value |= 32; // Set the piece as moved (assuming 32 is the bit for moved)
 
         EnPassantSquare = -1; // Reset en passant square after a move
 
@@ -97,6 +164,14 @@ public static class Board
                 var lastMove = MoveList.Last();
                 Square[lastMove.TargetSquare].Piece.gameObject.SetActive(false); // Optionally deactivate the captured pawn
                 Square[lastMove.TargetSquare].Piece = null; // Remove the captured pawn
+                break;
+            }
+            case MoveType.Promotion:
+            {
+                // Handle promotion logic
+                pieceMoved.Sprite = Piece.PiecesSprites[PromotedPiece]; // Update the piece sprite
+                move.PromotedPiece = PromotedPiece; // Set the promoted piece type
+                pieceMoved.Value = PromotedPiece | 32;
                 break;
             }
             case MoveType.Castling:
@@ -155,8 +230,28 @@ public static class Board
         SwitchColorToMove();
     }
 
+    public static Vector2 GetSquarePosition(int rank, int file, bool isPlayingWhite)
+    {
+        float squareSize = 1f; // Adjust to match your prefab spacing
+        float halfBoard = (8 - 1) / 2f; // = 3.5
+
+        float x = file - halfBoard;
+        float y = rank - halfBoard;
+
+        if (!isPlayingWhite)
+        {
+            x = -x;
+            y = -y;
+        }
+
+        return new Vector2(x * squareSize, y * squareSize);
+    }
+
+
     public static void SwitchColorToMove()
     {
         ColorToMove = ColorToMove == Piece.White ? Piece.Black : Piece.White;
+
+        OnTurnChanged?.Invoke(); // Notify subscribers that the turn has changed
     }
 }

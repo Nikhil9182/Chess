@@ -8,11 +8,14 @@ public struct Move
     public readonly int StartingSquare; // 0-63
     public readonly int TargetSquare; // 0-63
     public readonly MoveType Type; // Default is Normal
+    public int PromotedPiece; // Only used for promotions, default is Piece.None
+
     public Move(int StartingSquare, int TargetSquare, MoveType moveType)
     {
         this.StartingSquare = StartingSquare;
         this.TargetSquare = TargetSquare;
         this.Type = moveType;
+        this.PromotedPiece = Piece.None; // Default to no promotion
     }
 }
 
@@ -205,7 +208,16 @@ public class Moves
         int oneStep = startSquare + forwardDir;
         if (oneStep >= 0 && oneStep < 64 && Board.Square[oneStep].Value == Piece.None)
         {
-            generatedMoves.Add(new Move(startSquare, oneStep, MoveType.Normal));
+            int targetRank = oneStep / 8;
+            if (targetRank == 0 || targetRank == 7) // Promotion condition
+            {
+                // Add promotions to all piece types
+                generatedMoves.Add(new Move(startSquare, oneStep, MoveType.Promotion));
+            }
+            else
+            {
+                generatedMoves.Add(new Move(startSquare, oneStep, MoveType.Normal));
+            }
 
             // Two-step forward if not moved
             if (!Piece.HasMoved(piece))
@@ -223,10 +235,18 @@ public class Moves
         if (leftSquare >= 0 && leftSquare < 64)
         {
             int targetFile = leftSquare % 8;
-            if (Mathf.Abs(startFile - targetFile) == 1 &&
-                Piece.IsColor(Board.Square[leftSquare].Value, opponentColor))
+            int targetRank = leftSquare / 8;
+            if (Mathf.Abs(startFile - targetFile) == 1 && Piece.IsColor(Board.Square[leftSquare].Value, opponentColor))
             {
-                generatedMoves.Add(new Move(startSquare, leftSquare, MoveType.Normal));
+                if (targetRank == 0 || targetRank == 7) // Promotion condition
+                {
+                    // Add promotions to all piece types
+                    generatedMoves.Add(new Move(startSquare, leftSquare, MoveType.Promotion));
+                }
+                else
+                {
+                    generatedMoves.Add(new Move(startSquare, leftSquare, MoveType.Normal));
+                }
             }
         }
 
@@ -235,10 +255,18 @@ public class Moves
         if (rightSquare >= 0 && rightSquare < 64)
         {
             int targetFile = rightSquare % 8;
-            if (Mathf.Abs(startFile - targetFile) == 1 &&
-                Piece.IsColor(Board.Square[rightSquare].Value, opponentColor))
+            int targetRank = rightSquare / 8;
+            if (Mathf.Abs(startFile - targetFile) == 1 && Piece.IsColor(Board.Square[rightSquare].Value, opponentColor))
             {
-                generatedMoves.Add(new Move(startSquare, rightSquare, MoveType.Normal));
+                if (targetRank == 0 || targetRank == 7) // Promotion condition
+                {
+                    // Add promotions to all piece types
+                    generatedMoves.Add(new Move(startSquare, rightSquare, MoveType.Promotion));
+                }
+                else
+                {
+                    generatedMoves.Add(new Move(startSquare, rightSquare, MoveType.Normal));
+                }
             }
         }
 
@@ -304,7 +332,7 @@ public class Moves
             }
 
             // Queenside castling
-            int rookSquareQueenside = startRank * 8 + 0;
+            int rookSquareQueenside = startRank * 8;
             int rookPieceQueenside = Board.Square[rookSquareQueenside].Value;
             if (Piece.IsType(rookPieceQueenside, Piece.Rook) && !Piece.HasMoved(rookPieceQueenside) && Piece.IsColor(rookPieceKingside, friendlyColor))
             {

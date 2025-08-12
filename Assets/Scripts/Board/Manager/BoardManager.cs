@@ -6,7 +6,8 @@ public class BoardManager : MonoBehaviour
 {
     public static BoardManager Instance;
 
-    public GraphicalBoard Graphic;
+    public GraphicalBoard BoardVisuals;
+    public PromotionHandler PromotionHandlerUI;
 
     public BoardPositionInFen CustomPosition;
 
@@ -14,6 +15,7 @@ public class BoardManager : MonoBehaviour
     public BoardPiece PiecePrefab;
 
     public bool LoadDefaultPosition = true;
+    public bool PlayAsWhite = true; // If true, white pieces are at the bottom of the board
 
     private string DefaultPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
@@ -29,12 +31,9 @@ public class BoardManager : MonoBehaviour
 
     private void Start()
     {
-        //Graphical Setup
-        Graphic.CreateGraphicalBoard(transform.GetChild(0), SquarePrefab);
-
-        //Load Position
+        //Load Board
         var notation = (CustomPosition == null || CustomPosition.fenNotation.Length == 0 || LoadDefaultPosition) ? DefaultPosition : CustomPosition.fenNotation;
-        Board.LoadBoardPosition(notation, PiecePrefab, transform.GetChild(1));
+        Board.InitializeBoard(notation, SquarePrefab, PiecePrefab, BoardVisuals, transform, PlayAsWhite);
     }
 
     public void ResetSquares(bool resetColors, bool resetHighlights)
@@ -50,7 +49,7 @@ public class BoardManager : MonoBehaviour
                 if (resetColors)
                 {
                     bool isLightSquare = (file + rank) % 2 != 0;
-                    Board.Square[rank * 8 + file].SetSquareColor((isLightSquare) ? Graphic.lightColor : Graphic.darkColor);
+                    Board.Square[rank * 8 + file].SetSquareColor((isLightSquare) ? BoardVisuals.lightColor : BoardVisuals.darkColor);
                 }
             }
         }
@@ -68,5 +67,12 @@ public class BoardManager : MonoBehaviour
     public void SetColor(int square, Color assignColor)
     {
         Board.Square[square].SetSquareColor(assignColor);
+    }
+
+    [ContextMenu("Switch Board")]
+    public void SwitchBoard()
+    {
+        PlayAsWhite = !PlayAsWhite;
+        Board.SetSides(PlayAsWhite, BoardVisuals);
     }
 }
