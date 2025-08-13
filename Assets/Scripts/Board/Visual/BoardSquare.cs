@@ -78,7 +78,7 @@ public class BoardSquare : MonoBehaviour, IPointerDownHandler
             BoardManager.Instance.SetColor(move.TargetSquare, BoardManager.Instance.BoardVisuals.targetColor);
         };
 
-        if (move.Type == MoveType.Promotion)
+        if (move.MoveFlag == Move.QueenPromotion)
         {
             MoveOnClicked = () =>
             {

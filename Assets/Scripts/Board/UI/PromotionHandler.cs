@@ -30,7 +30,7 @@ public class PromotionHandler : MonoBehaviour
             button.onClick.AddListener(() => 
             {
                 // Set the piece type for promotion
-                Board.PromotedPiece = pieceValue; // Store the promoted piece value
+                //Board.PromotedPiece = pieceValue; // Store the promoted piece value
                 // Hide the promotion choices after selection
                 promotionAction.Invoke(); // Invoke the action passed to ShowPromotionChoices
 

@@ -17,7 +17,7 @@ public class BoardManager : MonoBehaviour
     public bool LoadDefaultPosition = true;
     public bool PlayAsWhite = true; // If true, white pieces are at the bottom of the board
 
-    private string DefaultPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+    private string DefaultPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
 
     private void Awake() 
     {
@@ -72,7 +72,7 @@ public class BoardManager : MonoBehaviour
     [ContextMenu("Switch Board")]
     public void SwitchBoard()
     {
-        PlayAsWhite = !PlayAsWhite;
-        Board.SetSides(PlayAsWhite, BoardVisuals);
+        Board.SwitchSides();
+        Board.SetSides(BoardVisuals);
     }
 }

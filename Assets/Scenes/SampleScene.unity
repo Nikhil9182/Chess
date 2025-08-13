@@ -1180,7 +1180,7 @@ MonoBehaviour:
   CustomPosition: {fileID: 11400000, guid: 7469125750593aa4caacce21d8fb9a6a, type: 2}
   SquarePrefab: {fileID: 4382455156880660033, guid: 13b3c055b78b90240ba68080a2c09981, type: 3}
   PiecePrefab: {fileID: 6007252574649145155, guid: 19398b47e75596e45935abd4c3e04431, type: 3}
-  LoadDefaultPosition: 1
+  LoadDefaultPosition: 0
   PlayAsWhite: 1
 --- !u!114 &1911537173
 MonoBehaviour:

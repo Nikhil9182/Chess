@@ -3,31 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct Move
-{
-    public readonly int StartingSquare; // 0-63
-    public readonly int TargetSquare; // 0-63
-    public readonly MoveType Type; // Default is Normal
-    public int PromotedPiece; // Only used for promotions, default is Piece.None
-
-    public Move(int StartingSquare, int TargetSquare, MoveType moveType)
-    {
-        this.StartingSquare = StartingSquare;
-        this.TargetSquare = TargetSquare;
-        this.Type = moveType;
-        this.PromotedPiece = Piece.None; // Default to no promotion
-    }
-}
-
-public enum MoveType
-{
-    Normal = 0, // Regular move
-    EnPassant = 1, // Special pawn capture
-    Promotion = 2, // Pawn promotion to another piece
-    Castling = 3, // King-side or Queen-side castling
-    DoublePush = 4, // Special pawn double push
-}
-
 public class Moves
 {
     public static List<Move> PossibleMoves = new List<Move>();
@@ -139,7 +114,7 @@ public class Moves
                     break;
                 }
 
-                generatedMoves.Add(new Move(startSquare, targetSquare, MoveType.Normal));
+                generatedMoves.Add(new Move(startSquare, targetSquare, Move.NoFlag));
 
                 // Can't capture after capturing an enemy piece, so stop here
                 if (Piece.IsColor(pieceOnTargetSquare, opponentColor))
@@ -183,7 +158,7 @@ public class Moves
                 (Mathf.Abs(startFile - targetFile) == 1 && Mathf.Abs(startRank - targetRank) == 2))
             {
 
-                generatedMoves.Add(new Move(startSquare, targetSquare, MoveType.Normal));
+                generatedMoves.Add(new Move(startSquare, targetSquare, Move.NoFlag));
             }
         }
 
@@ -212,20 +187,23 @@ public class Moves
             if (targetRank == 0 || targetRank == 7) // Promotion condition
             {
                 // Add promotions to all piece types
-                generatedMoves.Add(new Move(startSquare, oneStep, MoveType.Promotion));
+                generatedMoves.Add(new Move(startSquare, oneStep, Move.QueenPromotion));
+                generatedMoves.Add(new Move(startSquare, oneStep, Move.RookPromotion));
+                generatedMoves.Add(new Move(startSquare, oneStep, Move.BishopPromotion));
+                generatedMoves.Add(new Move(startSquare, oneStep, Move.KnightPromotion));
             }
             else
             {
-                generatedMoves.Add(new Move(startSquare, oneStep, MoveType.Normal));
+                generatedMoves.Add(new Move(startSquare, oneStep, Move.NoFlag));
             }
 
             // Two-step forward if not moved
-            if (!Piece.HasMoved(piece))
+            if ((Piece.IsColor(piece, Piece.White) && startRank == 1) || (Piece.IsColor(piece, Piece.Black) && startRank == 6))
             {
                 int twoStep = startSquare + forwardDir * 2;
                 if (Board.Square[twoStep].Value == Piece.None)
                 {
-                    generatedMoves.Add(new Move(startSquare, twoStep, MoveType.DoublePush));
+                    generatedMoves.Add(new Move(startSquare, twoStep, Move.DoublePush));
                 }
             }
         }
@@ -241,11 +219,14 @@ public class Moves
                 if (targetRank == 0 || targetRank == 7) // Promotion condition
                 {
                     // Add promotions to all piece types
-                    generatedMoves.Add(new Move(startSquare, leftSquare, MoveType.Promotion));
+                    generatedMoves.Add(new Move(startSquare, leftSquare, Move.QueenPromotion));
+                    generatedMoves.Add(new Move(startSquare, leftSquare, Move.RookPromotion));
+                    generatedMoves.Add(new Move(startSquare, leftSquare, Move.BishopPromotion));
+                    generatedMoves.Add(new Move(startSquare, leftSquare, Move.KnightPromotion));
                 }
                 else
                 {
-                    generatedMoves.Add(new Move(startSquare, leftSquare, MoveType.Normal));
+                    generatedMoves.Add(new Move(startSquare, leftSquare, Move.NoFlag));
                 }
             }
         }
@@ -261,11 +242,14 @@ public class Moves
                 if (targetRank == 0 || targetRank == 7) // Promotion condition
                 {
                     // Add promotions to all piece types
-                    generatedMoves.Add(new Move(startSquare, rightSquare, MoveType.Promotion));
+                    generatedMoves.Add(new Move(startSquare, rightSquare, Move.QueenPromotion));
+                    generatedMoves.Add(new Move(startSquare, rightSquare, Move.RookPromotion));
+                    generatedMoves.Add(new Move(startSquare, rightSquare, Move.BishopPromotion));
+                    generatedMoves.Add(new Move(startSquare, rightSquare, Move.KnightPromotion));
                 }
                 else
                 {
-                    generatedMoves.Add(new Move(startSquare, rightSquare, MoveType.Normal));
+                    generatedMoves.Add(new Move(startSquare, rightSquare, Move.NoFlag));
                 }
             }
         }
@@ -276,12 +260,12 @@ public class Moves
             // Left en passant
             if (startFile > 0 && Board.EnPassantSquare == startSquare + captureLeft)
             {
-                generatedMoves.Add(new Move(startSquare, Board.EnPassantSquare, MoveType.EnPassant));
+                generatedMoves.Add(new Move(startSquare, Board.EnPassantSquare, Move.EnPassantCapture));
             }
             // Right en passant
             if (startFile < 7 && Board.EnPassantSquare == startSquare + captureRight)
             {
-                generatedMoves.Add(new Move(startSquare, Board.EnPassantSquare, MoveType.EnPassant));
+                generatedMoves.Add(new Move(startSquare, Board.EnPassantSquare, Move.EnPassantCapture));
             }
         }
 
@@ -310,7 +294,7 @@ public class Moves
             int pieceOnTargetSquare = Board.Square[targetSquare].Value;
             if (pieceOnTargetSquare == Piece.None || Piece.IsColor(pieceOnTargetSquare, opponentColor))
             {
-                generatedMoves.Add(new Move(startSquare, targetSquare, MoveType.Normal));
+                generatedMoves.Add(new Move(startSquare, targetSquare, Move.NoFlag));
             }
         }
 
@@ -327,7 +311,7 @@ public class Moves
                     !AttackSquares.Contains(startSquare + 1) &&
                     !AttackSquares.Contains(startSquare + 2))
                 {
-                    generatedMoves.Add(new Move(startSquare, startSquare + 2, MoveType.Castling)); // Castle kingside
+                    generatedMoves.Add(new Move(startSquare, startSquare + 2, Move.KingCastle)); // Castle kingside
                 }
             }
 
@@ -343,7 +327,7 @@ public class Moves
                     !AttackSquares.Contains(startSquare - 1) &&
                     !AttackSquares.Contains(startSquare - 2))
                 {
-                    generatedMoves.Add(new Move(startSquare, startSquare - 2, MoveType.Castling)); // Castle queenside
+                    generatedMoves.Add(new Move(startSquare, startSquare - 2, Move.QueenCastle)); // Castle queenside
                 }
             }
         }
