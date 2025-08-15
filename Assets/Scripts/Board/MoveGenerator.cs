@@ -1,18 +1,23 @@
+using Chess.Extensions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Moves
+public class MoveGenerator
 {
-    public static List<Move> PossibleMoves = new List<Move>();
+    /// <summary>
+    /// This dictionary stores all the moves for the current color in turn.
+    /// Use this to access moves for a specific starting square.
+    /// </summary>
+    public static Dictionary<int, List<Move>> Moves = new Dictionary<int, List<Move>>();
     public static List<int> AttackSquares = new List<int>();
 
     public static readonly int[] KnightDirectionOffsets = { 15, 17, 10, 6, -15, -17, -10, -6 };
     public static readonly int[] SlidingDirectionOffsets = { 8, -8, -1, 1, 7, -7, 9, -9 };
     public static readonly int[][] NumSquaresToEdge;
 
-    static Moves()
+    static MoveGenerator()
     {
         NumSquaresToEdge = PrecomputedMoveData();
     }
@@ -47,50 +52,35 @@ public class Moves
         return numSquaresToEdge; // Return the initialized array
     }
 
-    public static List<Move> GetMoves(int color)
+    public static void GenerateMoves()
     {
-        var generatedMoves = new List<Move>();
-
         for (int startSquare = 0; startSquare < 64; startSquare++)
         {
-            int piece = Board.Square[startSquare].Value;
+            int piece = Board.Square[startSquare];
 
-            if (Piece.IsColor(piece, color))
+            if (Piece.IsColor(piece, Board.ColorToMove))
             {
                 // Sliding Pieces (Rooks, Bishops, Queens)
                 if (Piece.IsSlidingPiece(piece))
                 {
-                    generatedMoves.AddRange(GenerateSlidingPieceMoves(piece, startSquare));
+                    Moves.AddMoves(GenerateSlidingPieceMoves(piece, startSquare));
                 }
                 // Knights
                 if (Piece.IsType(piece, Piece.Knight))
                 {
-                    generatedMoves.AddRange(GenerateKnightMoves(piece, startSquare));
+                    Moves.AddMoves(GenerateKnightMoves(piece, startSquare));
                 }
                 if (Piece.IsType(piece, Piece.Pawn))
                 {
-                    generatedMoves.AddRange(GeneratePawnMoves(piece, startSquare));
+                    Moves.AddMoves(GeneratePawnMoves(piece, startSquare));
                 }
                 if (Piece.IsType(piece, Piece.King))
                 {
-                    generatedMoves.AddRange(GenerateKingMoves(piece, startSquare));
+                    Moves.AddMoves(GenerateKingMoves(piece, startSquare));
                 }
             }
         }
-
-        return generatedMoves;
     }
-
-    public static void GenerateMoves()
-    {
-        PossibleMoves = GetMoves(Board.ColorToMove);
-    }
-
-    public static void GenerateAttackedSquares(int color)
-    {
-        AttackSquares = GetMoves(color).ConvertAll(move => move.TargetSquare);
-    }
-
 
     public static List<Move> GenerateSlidingPieceMoves(int piece, int startSquare)
     {
@@ -106,7 +96,7 @@ public class Moves
             for (int n = 0; n < NumSquaresToEdge[startSquare][directionIndex]; n++)
             {
                 int targetSquare = startSquare + SlidingDirectionOffsets[directionIndex] * (n + 1);
-                int pieceOnTargetSquare = Board.Square[targetSquare].Value;
+                int pieceOnTargetSquare = Board.Square[targetSquare];
 
                 // Blocked by friendly piece, so dont move further in this direction
                 if (Piece.IsColor(pieceOnTargetSquare, friendlyColor))
@@ -144,7 +134,7 @@ public class Moves
             int targetFile = targetSquare % 8;
             int targetRank = targetSquare / 8;
 
-            int pieceOnTargetSquare = Board.Square[targetSquare].Value;
+            int pieceOnTargetSquare = Board.Square[targetSquare];
 
             if (Piece.IsColor(pieceOnTargetSquare, friendlyColor))
             {
@@ -181,7 +171,7 @@ public class Moves
 
         // One-step forward
         int oneStep = startSquare + forwardDir;
-        if (oneStep >= 0 && oneStep < 64 && Board.Square[oneStep].Value == Piece.None)
+        if (oneStep >= 0 && oneStep < 64 && Board.Square[oneStep] == Piece.None)
         {
             int targetRank = oneStep / 8;
             if (targetRank == 0 || targetRank == 7) // Promotion condition
@@ -201,7 +191,7 @@ public class Moves
             if ((Piece.IsColor(piece, Piece.White) && startRank == 1) || (Piece.IsColor(piece, Piece.Black) && startRank == 6))
             {
                 int twoStep = startSquare + forwardDir * 2;
-                if (Board.Square[twoStep].Value == Piece.None)
+                if (Board.Square[twoStep] == Piece.None)
                 {
                     generatedMoves.Add(new Move(startSquare, twoStep, Move.DoublePush));
                 }
@@ -214,7 +204,7 @@ public class Moves
         {
             int targetFile = leftSquare % 8;
             int targetRank = leftSquare / 8;
-            if (Mathf.Abs(startFile - targetFile) == 1 && Piece.IsColor(Board.Square[leftSquare].Value, opponentColor))
+            if (Mathf.Abs(startFile - targetFile) == 1 && Piece.IsColor(Board.Square[leftSquare], opponentColor))
             {
                 if (targetRank == 0 || targetRank == 7) // Promotion condition
                 {
@@ -237,7 +227,7 @@ public class Moves
         {
             int targetFile = rightSquare % 8;
             int targetRank = rightSquare / 8;
-            if (Mathf.Abs(startFile - targetFile) == 1 && Piece.IsColor(Board.Square[rightSquare].Value, opponentColor))
+            if (Mathf.Abs(startFile - targetFile) == 1 && Piece.IsColor(Board.Square[rightSquare], opponentColor))
             {
                 if (targetRank == 0 || targetRank == 7) // Promotion condition
                 {
@@ -291,7 +281,7 @@ public class Moves
             // Ensure we don't wrap horizontally (file diff should be <= 1)
             if (Mathf.Abs(startFile - targetFile) > 1) continue;
 
-            int pieceOnTargetSquare = Board.Square[targetSquare].Value;
+            int pieceOnTargetSquare = Board.Square[targetSquare];
             if (pieceOnTargetSquare == Piece.None || Piece.IsColor(pieceOnTargetSquare, opponentColor))
             {
                 generatedMoves.Add(new Move(startSquare, targetSquare, Move.NoFlag));
@@ -302,11 +292,11 @@ public class Moves
         {
             // Kingside castling
             int rookSquareKingside = startRank * 8 + 7;
-            int rookPieceKingside = Board.Square[rookSquareKingside].Value;
+            int rookPieceKingside = Board.Square[rookSquareKingside];
             if (Piece.IsType(rookPieceKingside, Piece.Rook) && !Piece.HasMoved(rookPieceKingside) && Piece.IsColor(rookPieceKingside, friendlyColor))
             {
-                if (Board.Square[startSquare + 1].Value == Piece.None &&
-                    Board.Square[startSquare + 2].Value == Piece.None &&
+                if (Board.Square[startSquare + 1] == Piece.None &&
+                    Board.Square[startSquare + 2] == Piece.None &&
                     !AttackSquares.Contains(startSquare) &&
                     !AttackSquares.Contains(startSquare + 1) &&
                     !AttackSquares.Contains(startSquare + 2))
@@ -317,12 +307,12 @@ public class Moves
 
             // Queenside castling
             int rookSquareQueenside = startRank * 8;
-            int rookPieceQueenside = Board.Square[rookSquareQueenside].Value;
+            int rookPieceQueenside = Board.Square[rookSquareQueenside];
             if (Piece.IsType(rookPieceQueenside, Piece.Rook) && !Piece.HasMoved(rookPieceQueenside) && Piece.IsColor(rookPieceKingside, friendlyColor))
             {
-                if (Board.Square[startSquare - 1].Value == Piece.None &&
-                    Board.Square[startSquare - 2].Value == Piece.None &&
-                    Board.Square[startSquare - 3].Value == Piece.None &&
+                if (Board.Square[startSquare - 1] == Piece.None &&
+                    Board.Square[startSquare - 2] == Piece.None &&
+                    Board.Square[startSquare - 3] == Piece.None &&
                     !AttackSquares.Contains(startSquare) &&
                     !AttackSquares.Contains(startSquare - 1) &&
                     !AttackSquares.Contains(startSquare - 2))

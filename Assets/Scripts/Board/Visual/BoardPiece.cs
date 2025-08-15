@@ -6,55 +6,26 @@ using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
 
-public class BoardPiece : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class BoardPiece : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
 {
     public int Value;
     public int Square; // Square index (0-63)
 
-    public Sprite Sprite { get { return image.sprite; } set { image.sprite = value; image.SetNativeSize(); } }
-
-    private Image image;
+    private Image _image;
 
     private void Awake()
     {
-        image = GetComponent<Image>();
+        if (_image == null) _image = GetComponent<Image>();
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (!Piece.IsColor(Value, Board.ColorToMove)) return;
-
-        List<Move> moves = new();
-
-        if (Piece.IsSlidingPiece(Value))
-            moves = Moves.GenerateSlidingPieceMoves(Value, Square);
-        if (Piece.IsType(Value, Piece.Knight))
-            moves = Moves.GenerateKnightMoves(Value, Square);
-        if (Piece.IsType(Value, Piece.Pawn))
-            moves = Moves.GeneratePawnMoves(Value, Square);
-        if (Piece.IsType(Value, Piece.King))
-            moves = Moves.GenerateKingMoves(Value, Square);
-
-        //foreach (Move move in moves)
-        //{
-        //    Debug.Log($"Move: {move.StartingSquare} -> {move.TargetSquare}");
-        //}
-
-        BoardManager.Instance.ResetSquares(true, true);
-        BoardManager.Instance.SetMoves(moves, this);
-        BoardManager.Instance.SetColor(Square, BoardManager.Instance.BoardVisuals.selectedColor);
-    }
-
-    public void OnBeginDrag(PointerEventData eventData)
-    {
-        if (!IsDraggable()) return;
+        BoardManager.Instance.OnPieceSelect(this); // Notify the board manager that this piece was selected
         transform.SetAsLastSibling(); // Bring the piece to the front while dragging
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!IsDraggable()) return;
-
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
             transform as RectTransform,
@@ -65,34 +36,29 @@ public class BoardPiece : MonoBehaviour, IPointerDownHandler, IBeginDragHandler,
         transform.position = worldPos;
     }
 
-    public void OnEndDrag(PointerEventData eventData)
+    public void OnPointerUp(PointerEventData eventData)
     {
-        if (!IsDraggable()) return;
-
-        // Raycast to see if dropped on a square
-        var results = new List<RaycastResult>();
-        EventSystem.current.RaycastAll(eventData, results);
-
-        foreach (var r in results)
+        if (Piece.IsColor(Value, Board.ColorToMove))
         {
-            var square = r.gameObject.GetComponent<BoardSquare>();
-            if (square != null && square.MoveOnClicked != null)
+            var lastSquare = BoardManager.Instance.GetSquareFromPosition(eventData.position);
+
+            if (lastSquare != Square && lastSquare != -1)
             {
-                square.OnSquareSelected(); // Trigger the square's click action
-                return;
+                //bool canMove = BoardManager.Instance.TryMovePiece(Square, lastSquare);
             }
         }
 
-        transform.position = Board.Square[Square].transform.position; // Reset position if not dropped on a square
+        transform.position = BoardManager.Instance.GetSquarePosition(Square); // Reset position if not dropped on a square
     }
 
-    private bool IsDraggable()
+    public void SetSprite(Sprite sprite)
     {
-        return Piece.IsColor(Value, Board.ColorToMove);
+        _image.sprite = sprite;
+        _image.SetNativeSize();
     }
 
     internal void OnTurnChanged()
     {
-        image.raycastTarget = Piece.IsColor(Value, Board.ColorToMove);
+        _image.raycastTarget = Piece.IsColor(Value, Board.ColorToMove);
     }
 }

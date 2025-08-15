@@ -6,7 +6,7 @@ using UnityEngine;
 
 public static class Board
 {
-    public static BoardSquare[] Square = new BoardSquare[64];
+    public static int[] Square = new int[64];
     public static List<Move> MoveList = new List<Move>();
 
     public static Action OnTurnChanged = null; // Action to notify when the turn changes
@@ -17,18 +17,17 @@ public static class Board
     public static int BlackCastle = 0b11; // 0b11 means both kingside and queenside castling are available
     public static int HalfMoveClock = 0; // Half-move clock for the fifty-move rule
     public static int FullMoveNumber = 0; // Full move number incremented after each move by black
-    public static bool PlayingWhite = true;
 
-    public static void InitializeBoard(string fen, BoardSquare squarePrefab, BoardPiece piecePrefab, GraphicalBoard boardVisuals, Transform parent, bool isPlayingWhite)
+    public static void InitializeBoard(string fen, BoardSquare squarePrefab, BoardPiece piecePrefab, GraphicalBoard boardVisuals, Transform parent, bool isPlayingWhite, out List<BoardSquare> boardSquares, out Dictionary<int, BoardPiece> boardPieces)
     {
-        PlayingWhite = isPlayingWhite; // Set the playing side
-        LoadBoardSquares(parent, squarePrefab, boardVisuals);
-        LoadBoardPositioFromFEN(fen, piecePrefab, parent);
-        SetSides(boardVisuals);
+        boardSquares = LoadBoardSquares(parent, squarePrefab, boardVisuals);
+        boardPieces = LoadBoardPositioFromFEN(fen, piecePrefab, parent);
+        MoveGenerator.GenerateMoves(); // Generate initial moves for all pieces
     }
 
-    public static void LoadBoardPositioFromFEN(string fen, BoardPiece piecePrefab, Transform boardPiecesTransform) 
+    public static Dictionary<int, BoardPiece> LoadBoardPositioFromFEN(string fen, BoardPiece piecePrefab, Transform boardPiecesTransform) 
     {
+        var boardPieces = new Dictionary<int, BoardPiece>();
         var pieceTypeFromSymbol = new Dictionary<char, int>()
         {
             ['k'] = Piece.King,
@@ -65,11 +64,11 @@ public static class Board
                     int square = rank * 8 + file;
 
                     BoardPiece newPiece = UnityEngine.Object.Instantiate(piecePrefab, boardPiecesTransform);
-
-                    Square[square].Piece = newPiece; // Assign the piece to the square
+                    boardPieces.Add(square, newPiece); // Add the piece to the dictionary
+                    Square[square] = pieceValue; // Assign the piece to the square
                     OnTurnChanged += newPiece.OnTurnChanged; // Subscribe to turn change event
 
-                    newPiece.Sprite = Piece.PiecesSprites[pieceValue];
+                    newPiece.SetSprite(Piece.PiecesSprites[pieceValue]);
                     newPiece.Value = pieceValue; //use 7 to get piece and 24 to get color
                     newPiece.Square = square; // Store the square index in the piece
 
@@ -101,20 +100,24 @@ public static class Board
         Debug.Log($"Board initialized from FEN: {fen}");
         Debug.Log($"Color to move: {(ColorToMove == Piece.White ? "White" : "Black")}, En Passant Square: {EnPassantSquare} ({fenNotationSplit[3]}), Half Move Clock: {HalfMoveClock}, Full Move Number: {FullMoveNumber}");
         Debug.Log($"White Castling Rights: {WhiteCastle}, Black Castling Rights: {BlackCastle}");
+
+        return boardPieces;
     }
 
-    public static void LoadBoardSquares(Transform boardPlaceContainer, BoardSquare squarePrefab, GraphicalBoard graphicBoard)
+    public static List<BoardSquare> LoadBoardSquares(Transform boardPlaceContainer, BoardSquare squarePrefab, GraphicalBoard graphicBoard)
     {
+        List<BoardSquare> boardSquares = new List<BoardSquare>();
         for (int rank = 0; rank < 8; rank++)
         {
             for (int file = 0; file < 8; file++)
             {
                 bool isLightSquare = (file + rank) % 2 != 0;
                 Color squareColor = (isLightSquare) ? graphicBoard.lightColor : graphicBoard.darkColor;
-                var square = DrawSquare(squareColor, boardPlaceContainer, squarePrefab);
-                Square[rank * 8 + file] = square;
+                boardSquares.Add(DrawSquare(squareColor, boardPlaceContainer, squarePrefab));
             }
         }
+
+        return boardSquares;
     }
 
     public static BoardSquare DrawSquare(Color squareColor, Transform boardPlaceContainer, BoardSquare squarePrefab)
@@ -123,35 +126,6 @@ public static class Board
         square.SetSquareColor(squareColor);
         return square;
     }
-
-    public static void SetSides(GraphicalBoard boardVisuals)
-    {
-        var markers = PlayingWhite ? 0 : 7; // Adjust markers based on the player's color
-        for (int rank = 0; rank < 8; rank++)
-        {
-            for (int file = 0; file < 8; file++)
-            {
-                int squareIndex = rank * 8 + file;
-                bool isLightSquare = (file + rank) % 2 != 0;
-
-
-                Square[squareIndex].transform.position = GetSquarePosition(rank, file);
-
-                if (Square[squareIndex].Piece != null)
-                {
-                    Square[squareIndex].Piece.transform.position = Square[squareIndex].transform.position; // Update piece position visually
-                }
-
-                if (rank == markers) Square[squareIndex].ShowFile(true, ((char)('a' + file)).ToString(), (isLightSquare) ? boardVisuals.darkColor : boardVisuals.lightColor);
-                else Square[squareIndex].ShowFile(false);
-
-                if (file == markers) Square[squareIndex].ShowRank(true, (rank + 1).ToString(), (isLightSquare) ? boardVisuals.darkColor : boardVisuals.lightColor);
-                else Square[squareIndex].ShowRank(false);
-            }
-        }
-    }
-
-    public static void SwitchSides() => PlayingWhite = !PlayingWhite; // Toggle the playing side
 
     //public static void MakeMove(Move move)
     //{
@@ -250,50 +224,10 @@ public static class Board
         }
 
         // Restore the board state
-        Square[lastMove.StartingSquare].Piece = Square[lastMove.TargetSquare].Piece;
-        Square[lastMove.TargetSquare].Piece = null;
+        Square[lastMove.StartingSquare] = Square[lastMove.TargetSquare];
+        Square[lastMove.TargetSquare] = 0;
         // Switch color back to the previous player
         SwitchColorToMove();
-    }
-
-    public static Vector2 GetSquarePosition(int rank, int file)
-    {
-        float squareSize = 1f; // Adjust to match your prefab spacing
-        float halfBoard = (8 - 1) / 2f; // = 3.5
-
-        float x = file - halfBoard;
-        float y = rank - halfBoard;
-
-        if (!PlayingWhite)
-        {
-            x = -x;
-            y = -y;
-        }
-
-        return new Vector2(x * squareSize, y * squareSize);
-    }
-
-    public static int GetSquareFromPosition(Vector2 position, bool isPlayingWhite)
-    {
-        float squareSize = 1f; // same as in GetSquarePosition
-        float halfBoard = (8 - 1) / 2f; // = 3.5
-
-        float x = position.x / squareSize;
-        float y = position.y / squareSize;
-
-        if (!isPlayingWhite)
-        {
-            x = -x;
-            y = -y;
-        }
-
-        int file = Mathf.RoundToInt(x + halfBoard);
-        int rank = Mathf.RoundToInt(y + halfBoard);
-
-        if (file < 0 || file > 7 || rank < 0 || rank > 7)
-            return -1; // invalid square
-
-        return rank * 8 + file; // square index 0..63
     }
 
     public static void SwitchColorToMove()
