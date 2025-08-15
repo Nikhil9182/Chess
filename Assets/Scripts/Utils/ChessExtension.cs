@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Chess.Board.Core;
 
-namespace Chess.Extensions
+namespace Chess.Utils
 {
     /// <summary>
     /// Provides extension methods for dictionaries that store chess moves.
