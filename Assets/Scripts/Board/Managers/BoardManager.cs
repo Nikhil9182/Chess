@@ -24,6 +24,7 @@ namespace Chess.Board.Managers
         private List<BoardSquare> BoardSquares = new List<BoardSquare>(); // List of squares on the board
         private Dictionary<int, BoardPiece> BoardPieces = new Dictionary<int, BoardPiece>(); // Dictionary to hold pieces by their square index
         private RectTransform _boardRectTransform;
+        private PromotionHandler _promotionUI; // Reference to the promotion UI handler
 
         private string _defaultPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
         private BoardPiece _selectedPiece = null;
@@ -40,6 +41,7 @@ namespace Chess.Board.Managers
 
         private void Start()
         {
+            _promotionUI = FindObjectOfType<PromotionHandler>();
             _boardRectTransform = GetComponent<RectTransform>();
             OnBoardInitialization();
         }
@@ -57,10 +59,55 @@ namespace Chess.Board.Managers
             SetBoardSides();
         }
 
-        //public bool TryMovePiece(, int )
-        //{
-        //    return true;
-        //}
+        public bool TryMovePiece()
+        {
+            return true;
+        }
+
+        /// <summary>
+        /// This code handles the square select and unselect part
+        /// Also it handles the making move part by selecting highlighted squares
+        /// </summary>
+        /// <param name="squareIndex"></param>
+        public void OnSquareSelect(int squareIndex)
+        {
+            var isActive = IsSquareHighlightActive(squareIndex);
+
+            // Check if the square has active highlight and then make move 
+            if (isActive)
+            {
+                // if highlight is active it means piece is selected and we can make move
+                var moves = MoveGenerator.Moves[_selectedPiece.Square];
+                // search through the possible move for this target square
+                foreach (var m in moves)
+                {
+                    if (m.TargetSquare == squareIndex)
+                    {
+                        // Make move here 
+                        // Write making move in BoardHandler code here
+                        if (m.MoveFlag == Move.QueenPromotion)
+                        {
+                            Debug.Log($"Promotion UI");
+                            _promotionUI.ShowPromotionChoices(m.StartingSquare, m.TargetSquare);
+                            return; // Handle promotion logic here if needed
+                        }
+
+                        Debug.Log($"Made Move To ---> {squareIndex}");
+
+                        OnMakeMove(m);
+                    }
+                }
+            }
+            else if (BoardHandler.Square[squareIndex] == 0 && !isActive) // if the index is empty and no highlight then we deselect the current selected piece
+            {
+                OnPieceUnselect();
+            }
+            else // if the current square is not empty then we select that piece
+            {
+                if (BoardPieces.ContainsKey(squareIndex)) OnPieceSelect(BoardPieces[squareIndex]);
+                else Debug.LogError("No piece is present!! Check this code, its faulty or BoardHandler.Square is not updated");
+            }
+        }
 
         /// <summary>
         /// Sets the selected piece and highlights its possible moves.
@@ -98,6 +145,7 @@ namespace Chess.Board.Managers
         /// </summary>
         public void OnPieceUnselect()
         {
+            if (_selectedPiece == null) return;
             int square = _selectedPiece.Square;
             bool isLightSquare = ((square % 8) + (square / 8)) % 2 != 0;
             SetSquareColor(square, isLightSquare ? BoardVisuals.lightColor : BoardVisuals.darkColor);
@@ -124,6 +172,47 @@ namespace Chess.Board.Managers
         public void SetSquareColor(int square, Color assignColor)
         {
             BoardSquares[square].SetSquareColor(assignColor);
+        }
+
+        /// <summary>
+        /// Updates the BoardPieces dictionary and the visual representation of the board when a move is made.
+        /// </summary>
+        /// <param name="move"></param>
+        public void OnMakeMove(Move move)
+        {
+            if (BoardPieces.ContainsKey(move.TargetSquare)) // Probably we capture the opponent piece so we just disable and remove it
+            {
+                BoardPieces[move.TargetSquare].gameObject.SetActive(false);
+                BoardPieces.Remove(move.TargetSquare);
+                Debug.Log("Captured Piece At : " + move.TargetSquare);
+            }
+
+            BoardPieces.Remove(move.StartingSquare);
+            BoardPieces.Add(move.TargetSquare, _selectedPiece);
+
+            var promotionFlagMask = 0b01000; // Mask for promotion flags
+            if ((move.MoveFlag & promotionFlagMask) == promotionFlagMask)
+            {
+                // Promoted piece logic
+                 Debug.Log($"Piece Promotion ---> {move.MoveFlag}");
+
+                var newValue = Piece.Knight + move.MoveFlag - promotionFlagMask;
+                newValue |= BoardHandler.ColorToMove; // Combine with color
+                _selectedPiece.SetSprite(Piece.PiecesSprites[newValue], newValue);
+                _selectedPiece.Value = newValue; // Update the piece value
+            }
+
+            _selectedPiece.transform.position = BoardSquares[move.TargetSquare].transform.position;
+
+            OnPieceUnselect(); // Unselect the piece after making the move
+
+            SetSquareColor(move.TargetSquare, BoardVisuals.targetColor);
+            SetSquareColor(move.StartingSquare, BoardVisuals.selectedColor);
+        }
+
+        public bool IsSquareHighlightActive(int square)
+        {
+            return BoardSquares[square].IsHighlightActive(); // Check if the square can be moved over (highlighted)
         }
 
         [ContextMenu("Switch Board")]
@@ -195,7 +284,7 @@ namespace Chess.Board.Managers
             float x = position.x / squareSize;
             float y = position.y / squareSize;
 
-            if (BoardHandler.ColorToMove == Piece.White)
+            if (!PlayAsWhite)
             {
                 x = -x;
                 y = -y;

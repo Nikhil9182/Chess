@@ -68,12 +68,12 @@ namespace Chess.Board.Core
                         int pieceValue = pieceType | pieceColor;
                         int square = rank * 8 + file;
 
-                        BoardPiece newPiece = UnityEngine.Object.Instantiate(piecePrefab, boardPiecesTransform);
+                        BoardPiece newPiece = UnityEngine.Object.Instantiate(piecePrefab, boardPiecesTransform.GetChild(1));
                         boardPieces.Add(square, newPiece); // Add the piece to the dictionary
                         Square[square] = pieceValue; // Assign the piece to the square
                         OnTurnChanged += newPiece.OnTurnChanged; // Subscribe to turn change event
 
-                        newPiece.SetSprite(Piece.PiecesSprites[pieceValue]);
+                        newPiece.SetSprite(Piece.PiecesSprites[pieceValue], pieceValue);
                         newPiece.Value = pieceValue; //use 7 to get piece and 24 to get color
                         newPiece.Square = square; // Store the square index in the piece
 
@@ -127,7 +127,7 @@ namespace Chess.Board.Core
 
         public static BoardSquare DrawSquare(Color squareColor, Transform boardPlaceContainer, BoardSquare squarePrefab)
         {
-            BoardSquare square = UnityEngine.Object.Instantiate(squarePrefab, boardPlaceContainer);
+            BoardSquare square = UnityEngine.Object.Instantiate(squarePrefab, boardPlaceContainer.GetChild(0));
             square.SetSquareColor(squareColor);
             return square;
         }
@@ -210,11 +210,6 @@ namespace Chess.Board.Core
         //    // Add the move to the move list
         //    MoveList.Add(move);
         //}
-
-        public static void MakeMove(Move move)
-        {
-
-        }
 
         public static void UnmakeMove()
         {

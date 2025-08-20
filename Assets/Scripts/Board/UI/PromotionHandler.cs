@@ -6,6 +6,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using Chess.Pieces;
 using Chess.Board.Core;
+using Chess.Board.Managers;
 
 namespace Chess.Board.UI
 {
@@ -14,38 +15,33 @@ namespace Chess.Board.UI
         [SerializeField]
         private List<Button> promotionButtons = new List<Button>();
 
-        public void ShowPromotionChoices(UnityAction promotionAction)
+        public void ShowPromotionChoices(int starting, int target)
         {
-            transform.GetChild(0).gameObject.SetActive(true);
-
-            int[] pieces = new int[] { Piece.Queen, Piece.Rook, Piece.Bishop, Piece.Knight };
+            SetActive(true);
 
             for (int i = 0; i < promotionButtons.Count; i++)
             {
                 var button = promotionButtons[i];
-                button.onClick.RemoveAllListeners(); // Clear previous listeners
 
+                button.onClick.RemoveAllListeners(); // Clear previous listeners
                 var image = button.transform.GetChild(0).GetComponent<Image>();
 
-                var pieceValue = pieces[i] | BoardHandler.ColorToMove; // Combine piece type with color
-                image.sprite = Piece.PiecesSprites[pieceValue];
+                var value = (Piece.Knight + i) | BoardHandler.ColorToMove; // Knight, Bishop, Rook, Queen
+                image.sprite = Piece.PiecesSprites[value];
                 image.SetNativeSize(); // Adjust the size of the image to fit
+                var index = i; // Capture the current index for the listener
 
                 button.onClick.AddListener(() => 
                 {
-                    // Set the piece type for promotion
-                    //Board.PromotedPiece = pieceValue; // Store the promoted piece value
-                    // Hide the promotion choices after selection
-                    promotionAction.Invoke(); // Invoke the action passed to ShowPromotionChoices
-
-                    HidePromotionChoices();
+                    BoardManager.Instance.OnMakeMove(new Move(starting, target,  Move.KnightPromotion + index));
+                    SetActive(false); // Hide the promotion choices after selection
                 });
             }
         }
 
-        public void HidePromotionChoices()
+        public void SetActive(bool active)
         {
-            transform.GetChild(0).gameObject.SetActive(false);
+            transform.GetChild(0).gameObject.SetActive(active);
         }
     }
 }

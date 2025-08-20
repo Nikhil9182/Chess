@@ -1,3 +1,5 @@
+using Chess.Board.Core;
+using Chess.Board.Managers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +10,7 @@ using UnityEngine.UI;
 
 namespace Chess.Board.UI
 {
-    public class BoardSquare : MonoBehaviour
+    public class BoardSquare : MonoBehaviour, IPointerDownHandler
     {
         [SerializeField]
         private Image img;
@@ -52,6 +54,18 @@ namespace Chess.Board.UI
         public void SetHighlightActive(bool enable)
         {
             highlightImg.enabled = enable; // Enable or disable the highlight image
+        }
+
+        public bool IsHighlightActive()
+        {
+            //Debug.Log($"IsHighlightActive: {highlightImg.enabled}");
+            return highlightImg.enabled;
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            var square = BoardManager.Instance.GetSquareFromPosition(eventData.position);
+            BoardManager.Instance.OnSquareSelect(square);
         }
     }
 }

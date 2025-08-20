@@ -25,12 +25,20 @@ namespace Chess.Board.UI
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            if (BoardManager.Instance.IsSquareHighlightActive(Square))
+            {
+                BoardManager.Instance.OnSquareSelect(Square);
+                return;
+            }
+
             BoardManager.Instance.OnPieceSelect(this); // Notify the board manager that this piece was selected
             transform.SetAsLastSibling(); // Bring the piece to the front while dragging
         }
 
         public void OnDrag(PointerEventData eventData)
         {
+            if (BoardManager.Instance.IsSquareHighlightActive(Square)) return;
+
             Vector3 worldPos;
             RectTransformUtility.ScreenPointToWorldPointInRectangle(
                 transform as RectTransform,
@@ -43,23 +51,28 @@ namespace Chess.Board.UI
 
         public void OnPointerUp(PointerEventData eventData)
         {
+            if (BoardManager.Instance.IsSquareHighlightActive(Square)) return;
+
             if (Piece.IsColor(Value, BoardHandler.ColorToMove))
             {
                 var lastSquare = BoardManager.Instance.GetSquareFromPosition(eventData.position);
 
-                if (lastSquare != Square && lastSquare != -1)
+                if (lastSquare != Square && lastSquare != -1 && BoardManager.Instance.IsSquareHighlightActive(lastSquare))
                 {
-                    //bool canMove = BoardManager.Instance.TryMovePiece(Square, lastSquare);
+                    // Make move here
+                    // Write move code here
                 }
             }
 
             transform.position = BoardManager.Instance.GetSquarePosition(Square); // Reset position if not dropped on a square
         }
 
-        public void SetSprite(Sprite sprite)
+        public void SetSprite(Sprite sprite, int value)
         {
             _image.sprite = sprite;
             _image.SetNativeSize();
+            gameObject.name = sprite.name;
+            Value = value; // Set the piece value
         }
 
         internal void OnTurnChanged()

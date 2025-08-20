@@ -181,9 +181,6 @@ namespace Chess.Board.Core
                 {
                     // Add promotions to all piece types
                     generatedMoves.Add(new Move(startSquare, oneStep, Move.QueenPromotion));
-                    generatedMoves.Add(new Move(startSquare, oneStep, Move.RookPromotion));
-                    generatedMoves.Add(new Move(startSquare, oneStep, Move.BishopPromotion));
-                    generatedMoves.Add(new Move(startSquare, oneStep, Move.KnightPromotion));
                 }
                 else
                 {
@@ -213,9 +210,6 @@ namespace Chess.Board.Core
                     {
                         // Add promotions to all piece types
                         generatedMoves.Add(new Move(startSquare, leftSquare, Move.QueenPromotion));
-                        generatedMoves.Add(new Move(startSquare, leftSquare, Move.RookPromotion));
-                        generatedMoves.Add(new Move(startSquare, leftSquare, Move.BishopPromotion));
-                        generatedMoves.Add(new Move(startSquare, leftSquare, Move.KnightPromotion));
                     }
                     else
                     {
@@ -236,9 +230,6 @@ namespace Chess.Board.Core
                     {
                         // Add promotions to all piece types
                         generatedMoves.Add(new Move(startSquare, rightSquare, Move.QueenPromotion));
-                        generatedMoves.Add(new Move(startSquare, rightSquare, Move.RookPromotion));
-                        generatedMoves.Add(new Move(startSquare, rightSquare, Move.BishopPromotion));
-                        generatedMoves.Add(new Move(startSquare, rightSquare, Move.KnightPromotion));
                     }
                     else
                     {

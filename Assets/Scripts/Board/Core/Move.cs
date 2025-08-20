@@ -22,10 +22,6 @@ namespace Chess.Board.Core
         public const int BishopPromotion = 0b01001; // 9
         public const int RookPromotion = 0b01010; // 10
         public const int QueenPromotion = 0b01011; // 11
-        public const int KnightPromotionCapture = 0b01100; // 12
-        public const int BishopPromotionCapture = 0b01101; // 13
-        public const int RookPromotionCapture = 0b01110; // 14
-        public const int QueenPromotionCapture = 0b01111; // 15
 
         // Create move
         public Move(int startingSquare, int targetSquare, int flag)

@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92e525ba1868b4948af267c4687601c2, type: 3}
   m_Name: CustomBoardPosition
   m_EditorClassIdentifier: 
-  fenNotation: 8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1
+  fenNotation: '8/4P3/8/8/8/8/4p3/8 w - - 0 1 '
