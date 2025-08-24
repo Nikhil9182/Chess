@@ -5,29 +5,31 @@ using Chess.Board.ScriptableObjects;
 using Chess.Board.Core;
 using Chess.Board.UI;
 using Chess.Pieces;
+using Chess.Utils;
+using System.Linq;
 
 namespace Chess.Board.Managers
 {
-    public class BoardManager : MonoBehaviour
+    public class BoardVisualsManager : MonoBehaviour
     {
-        public static BoardManager Instance;
+        public static BoardVisualsManager Instance;
 
-        public GraphicalBoard BoardVisuals;
+        public BoardVisualData BoardVisualData;
         public BoardPositionInFen CustomPosition;
-        public BoardSquare SquarePrefab;
-        public BoardPiece PiecePrefab;
+        public SquareVisual SquarePrefab;
+        public PieceVisual PiecePrefab;
         public Canvas BoardCanvas; // Canvas that holds the board
 
         public bool LoadDefaultPosition = true;
         public bool PlayAsWhite = true; // If true, white pieces are at the bottom of the board
 
-        private List<BoardSquare> BoardSquares = new List<BoardSquare>(); // List of squares on the board
-        private Dictionary<int, BoardPiece> BoardPieces = new Dictionary<int, BoardPiece>(); // Dictionary to hold pieces by their square index
+        private List<SquareVisual> BoardSquares = new List<SquareVisual>(); // List of squares on the board
+        private Dictionary<int, PieceVisual> BoardPieces = new Dictionary<int, PieceVisual>(); // Dictionary to hold pieces by their square index
         private RectTransform _boardRectTransform;
         private PromotionHandler _promotionUI; // Reference to the promotion UI handler
 
         private string _defaultPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
-        private BoardPiece _selectedPiece = null;
+        private PieceVisual _selectedPiece = null;
 
         private void Awake() 
         {
@@ -39,24 +41,86 @@ namespace Chess.Board.Managers
             }
         }
 
+        /// <summary>
+        /// Initializes the board and its associated components.
+        /// </summary>
+        /// <remarks>This method sets up the board by locating required components and performing any
+        /// necessary initialization steps. It should be called to ensure the board is ready for use.</remarks>
         private void Start()
         {
             _promotionUI = FindObjectOfType<PromotionHandler>();
             _boardRectTransform = GetComponent<RectTransform>();
+
             OnBoardInitialization();
         }
 
         /// <summary>
-        /// Initializes the board with the default or custom position.
-        /// Also sets the board sides based on the player's color.
+        /// Initializes the chessboard by loading the specified position and setting up the board state.
         /// </summary>
+        /// <remarks>If a custom position is provided via <see cref="CustomPosition"/> and is valid, it
+        /// will be used to initialize the board.  Otherwise, the default position is loaded. This method also sets up
+        /// the board squares, pieces, and sides.</remarks>
         public void OnBoardInitialization()
         {
-            //Load Board
             var notation = (CustomPosition == null || CustomPosition.fenNotation.Length == 0 || LoadDefaultPosition) ? _defaultPosition : CustomPosition.fenNotation;
-            BoardHandler.InitializeBoard(notation, SquarePrefab, PiecePrefab, BoardVisuals, transform, PlayAsWhite, out BoardSquares, out BoardPieces);
+            ChessParser.LoadFENOnBoard(notation);
 
+            LoadBoardSquares();
+            LoadBoardPieces();
             SetBoardSides();
+        }
+
+        /// <summary>
+        /// Instantiates and places chess pieces on the board based on the current board state.
+        /// </summary>
+        /// <remarks>This method iterates through all 64 squares of the chessboard, instantiating a piece
+        /// for each square that contains a non-zero value in the board state. The instantiated pieces are positioned on
+        /// the corresponding board squares and configured with the appropriate sprite and value.</remarks>
+        public void LoadBoardPieces()
+        {
+            for (int square = 0; square < 64; square++)
+            {
+                var pieceValue = BoardHandler.Square[square];
+                if (pieceValue == 0) continue; // No piece on this square
+                var piece = Instantiate(PiecePrefab, BoardSquares[square].transform.position, Quaternion.identity, transform.GetChild(1));
+                piece.SetSprite(Piece.PiecesSprites[pieceValue], pieceValue);
+                piece.Square = square;
+                piece.Value = pieceValue;
+                BoardPieces.Add(square, piece);
+            }
+        }
+
+        /// <summary>
+        /// Initializes and populates the chessboard with squares, alternating between light and dark colors.
+        /// </summary>
+        /// <remarks>This method creates an 8x8 grid of squares, assigning a color to each square based on
+        /// its position. Light and dark colors alternate, starting with a dark square in the top-left corner.</remarks>
+        public void LoadBoardSquares()
+        {
+            for (int rank = 0; rank < 8; rank++)
+            {
+                for (int file = 0; file < 8; file++)
+                {
+                    bool isLightSquare = (file + rank) % 2 != 0;
+                    Color squareColor = (isLightSquare) ? BoardVisualData.lightColor : BoardVisualData.darkColor;
+                    BoardSquares.Add(DrawSquare(squareColor));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates and returns a new square visual with the specified color.
+        /// </summary>
+        /// <remarks>The square is instantiated using the predefined <c>SquarePrefab</c> and is added as a
+        /// child  to the first child of the current transform. Ensure that <c>SquarePrefab</c> is properly  assigned
+        /// and that the transform has at least one child before calling this method.</remarks>
+        /// <param name="squareColor">The color to apply to the square.</param>
+        /// <returns>A <see cref="SquareVisual"/> instance representing the newly created square.</returns>
+        public SquareVisual DrawSquare(Color squareColor)
+        {
+            SquareVisual square = Instantiate(SquarePrefab, transform.GetChild(0));
+            square.SetSquareColor(squareColor);
+            return square;
         }
 
         public bool TryMovePiece()
@@ -113,7 +177,7 @@ namespace Chess.Board.Managers
         /// Sets the selected piece and highlights its possible moves.
         /// </summary>
         /// <param name="piece"></param>
-        public void OnPieceSelect(BoardPiece piece)
+        public void OnPieceSelect(PieceVisual piece)
         {
             if (_selectedPiece != null)
             {
@@ -130,7 +194,7 @@ namespace Chess.Board.Managers
 
             var square = piece.Square;
 
-            SetSquareColor(square, BoardVisuals.selectedColor);
+            SetSquareColor(square, BoardVisualData.selectedColor);
 
             if (!Piece.IsColor(piece.Value, BoardHandler.ColorToMove)) return;
 
@@ -148,7 +212,7 @@ namespace Chess.Board.Managers
             if (_selectedPiece == null) return;
             int square = _selectedPiece.Square;
             bool isLightSquare = ((square % 8) + (square / 8)) % 2 != 0;
-            SetSquareColor(square, isLightSquare ? BoardVisuals.lightColor : BoardVisuals.darkColor);
+            SetSquareColor(square, isLightSquare ? BoardVisualData.lightColor : BoardVisualData.darkColor);
             if (MoveGenerator.Moves.ContainsKey(square)) HandleSquareHighlight(false, MoveGenerator.Moves[square]);
             _selectedPiece = null; // Deselect the piece
         }
@@ -182,14 +246,31 @@ namespace Chess.Board.Managers
         {
             if (BoardPieces.ContainsKey(move.TargetSquare)) // Probably we capture the opponent piece so we just disable and remove it
             {
-                BoardPieces[move.TargetSquare].gameObject.SetActive(false);
+                BoardPieces[move.TargetSquare].gameObject.SetActive(false); // Disable the captured piece
                 BoardPieces.Remove(move.TargetSquare);
                 Debug.Log("Captured Piece At : " + move.TargetSquare);
+            }
+
+            // enpassant handling
+            if (move.MoveFlag == Move.EnPassantCapture)
+            {
+                // Handle en passant capture
+                var lastMove = BoardHandler.MoveList.Last();
+                if (BoardPieces.ContainsKey(lastMove.TargetSquare))
+                {
+                    BoardPieces[lastMove.TargetSquare].gameObject.SetActive(false); // Optionally deactivate the captured pawn
+                    BoardPieces.Remove(lastMove.TargetSquare);
+                }
+                else
+                {
+                    Debug.LogError("En Passant Capture Error: No piece found on the expected square.");
+                }
             }
 
             BoardPieces.Remove(move.StartingSquare);
             BoardPieces.Add(move.TargetSquare, _selectedPiece);
 
+            // promotion handling
             var promotionFlagMask = 0b01000; // Mask for promotion flags
             if ((move.MoveFlag & promotionFlagMask) == promotionFlagMask)
             {
@@ -206,15 +287,27 @@ namespace Chess.Board.Managers
 
             OnPieceUnselect(); // Unselect the piece after making the move
 
-            SetSquareColor(move.TargetSquare, BoardVisuals.targetColor);
-            SetSquareColor(move.StartingSquare, BoardVisuals.selectedColor);
+            SetSquareColor(move.TargetSquare, BoardVisualData.targetColor);
+            SetSquareColor(move.StartingSquare, BoardVisualData.selectedColor);
         }
 
+        /// <summary>
+        /// Determines whether the highlight is active for the specified square.
+        /// </summary>
+        /// <param name="square">The index of the square to check.</param>
+        /// <returns><see langword="true"/> if the highlight is active for the specified square; otherwise, <see
+        /// langword="false"/>.</returns>
         public bool IsSquareHighlightActive(int square)
         {
             return BoardSquares[square].IsHighlightActive(); // Check if the square can be moved over (highlighted)
         }
 
+        /// <summary>
+        /// Toggles the board orientation between playing as white and playing as black.
+        /// </summary>
+        /// <remarks>This method switches the value of the <see cref="PlayAsWhite"/> property and updates
+        /// the board sides accordingly. It is typically used to change the perspective of the board during
+        /// gameplay.</remarks>
         [ContextMenu("Switch Board")]
         public void SwitchBoard()
         {
@@ -238,10 +331,10 @@ namespace Chess.Board.Managers
 
                     if (BoardPieces.ContainsKey(squareIndex)) BoardPieces[squareIndex].transform.position = square.transform.position;
 
-                    if (rank == markers) square.ShowFile(true, ((char)('a' + file)).ToString(), (isLightSquare) ? BoardVisuals.darkColor : BoardVisuals.lightColor);
+                    if (rank == markers) square.ShowFile(true, ((char)('a' + file)).ToString(), (isLightSquare) ? BoardVisualData.darkColor : BoardVisualData.lightColor);
                     else square.ShowFile(false);
 
-                    if (file == markers) square.ShowRank(true, (rank + 1).ToString(), (isLightSquare) ? BoardVisuals.darkColor : BoardVisuals.lightColor);
+                    if (file == markers) square.ShowRank(true, (rank + 1).ToString(), (isLightSquare) ? BoardVisualData.darkColor : BoardVisualData.lightColor);
                     else square.ShowRank(false);
                 }
             }

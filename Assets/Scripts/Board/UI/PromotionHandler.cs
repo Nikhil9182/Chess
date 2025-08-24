@@ -33,7 +33,7 @@ namespace Chess.Board.UI
 
                 button.onClick.AddListener(() => 
                 {
-                    BoardManager.Instance.OnMakeMove(new Move(starting, target,  Move.KnightPromotion + index));
+                    BoardVisualsManager.Instance.OnMakeMove(new Move(starting, target,  Move.KnightPromotion + index));
                     SetActive(false); // Hide the promotion choices after selection
                 });
             }

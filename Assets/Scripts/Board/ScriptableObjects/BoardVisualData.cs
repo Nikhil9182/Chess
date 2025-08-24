@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Chess.Board.ScriptableObjects
 {
     [CreateAssetMenu]
-    public class GraphicalBoard : ScriptableObject
+    public class BoardVisualData : ScriptableObject
     {
         public Color lightColor;
         public Color darkColor;

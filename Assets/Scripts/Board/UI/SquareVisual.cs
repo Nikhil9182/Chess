@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace Chess.Board.UI
 {
-    public class BoardSquare : MonoBehaviour, IPointerDownHandler
+    public class SquareVisual : MonoBehaviour, IPointerDownHandler
     {
         [SerializeField]
         private Image img;
@@ -64,8 +64,8 @@ namespace Chess.Board.UI
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            var square = BoardManager.Instance.GetSquareFromPosition(eventData.position);
-            BoardManager.Instance.OnSquareSelect(square);
+            var square = BoardVisualsManager.Instance.GetSquareFromPosition(eventData.position);
+            BoardVisualsManager.Instance.OnSquareSelect(square);
         }
     }
 }

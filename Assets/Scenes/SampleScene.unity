@@ -312,10 +312,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 379998737}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 414451efb53aaa94db6f8b37662a1e51, type: 3}
+  m_Script: {fileID: 11500000, guid: 680d5bd9026b07b41a7e0a5c661d9188, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BoardVisuals: {fileID: 11400000, guid: 049e34294e81bf14aa6f144f46ae04ab, type: 2}
+  BoardVisualData: {fileID: 11400000, guid: 55d84ca36d692464c8d50cd23ab214af, type: 2}
   CustomPosition: {fileID: 11400000, guid: 7469125750593aa4caacce21d8fb9a6a, type: 2}
   SquarePrefab: {fileID: 4382455156880660033, guid: 13b3c055b78b90240ba68080a2c09981, type: 3}
   PiecePrefab: {fileID: 6007252574649145155, guid: 19398b47e75596e45935abd4c3e04431, type: 3}
